@@ -28,12 +28,58 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
-@app.route('/hello', methods=['POST', 'GET'])
-def handle_hello():
+@app.route('/todos/user/<username>', methods=['POST', 'GET', 'PUT', 'DELETE'])
+def handle_todos(username):
 
-    response_body = {
-        "hello": "world"
+    headers = {
+        Content-Type: "application/json"
     }
+
+    requesting_user = User.query.filter_by(username=username).all()
+    if request.method=='GET': 
+        if len(requesting_user) <1:
+            print("Usuario no existe")
+            response_body= {
+                "status":"HHTP_404_NOT_FOUND. Usuario no existe"
+
+            }
+            status_code = 404
+        else:
+            print("Usuario Existe")
+            user_tasks_list = Task.query.filter_by(user_username=username).all()
+            response_body = []
+            for task in user_tasks_list:
+                response_body.append(task.serialize())
+            status_code = 200
+
+    elif request.method=='POST': 
+        if len(requesting_user) >0:      
+            response_body = {
+                "status": "HTTP_400_BAD_REQUEST. Usuario ya existe"
+            }
+            status_code = 400
+
+        elif request.json != []:
+
+            response_body = {
+                "status": "HTTP_400_BAD_REQUEST. Datos inesperados para crear usuario"
+            }    
+            status_code = 400
+        
+        else:
+
+            print("Creando usuario con una tarea")
+            new_user = User(username)
+            new_user.username = username
+            db.session.add(new_user)
+            sample_task = Task("sample task", new_user.username)
+            db.session.add(sample_task)
+            db.session.commit()
+            response_body = {
+                "status": "ok"
+            }
+            status_code = 200
+                   
 
     return jsonify(response_body), 200
 
